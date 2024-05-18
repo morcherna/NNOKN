@@ -11,7 +11,7 @@ from io import BytesIO
 
 
 
-bot = telebot.TeleBot('7048895621:AAEGl76WZNewVPZgL3l1yK1XZo-cZs76eWA')
+bot = telebot.TeleBot('token')
 
 try:
     with open('database.json', 'r', encoding='utf-8') as file:
@@ -108,7 +108,7 @@ def handle_photo(message):
     # Получаем информацию о фотографии
     file_id = message.photo[-1].file_id
     file_info = bot.get_file(file_id)
-    bot.token = '7048895621:AAEGl76WZNewVPZgL3l1yK1XZo-cZs76eWA'
+    bot.token = 'token'
     file_url = f"https://api.telegram.org/file/bot{bot.token}/{file_info.file_path}"
 
     # Загружаем изображение из URL
