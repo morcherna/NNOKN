@@ -12,13 +12,25 @@ import os
 import osmnx as ox
 import networkx as nx
 import matplotlib.image as mpimg
+import folium
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from PIL import Image
+
 
 from geopy.distance import geodesic
 import matplotlib.pyplot as plt
+from staticmap import StaticMap, IconMarker, CircleMarker, Line
+
+import guide
 
 bot = telebot.TeleBot('token')
 
-G = ox.graph_from_place('Nizhny Novgorod, Russia', network_type='walk')
+#G = ox.plot_route_folium('Nizhny Novgorod, Russia')
+place = 'Nizhny Novgorod, Russia'
+graph = ox.graph_from_place(place, network_type='walk')
 
 try:
     with open('database.json', 'r', encoding='utf-8') as file:
@@ -75,31 +87,103 @@ def save_image(image, folder_name, file_name):
     image.save(image_path)
 
 
-def calculate_distances(user_location, responses):
+# def find_nearest_place(user_location):
+#     distances = []
+#     for place, info in responses.items():
+#         lat, lon = map(float, info['геолокация'].split(', '))
+#         place_location = (lat, lon)
+#         distance = geodesic(user_location, place_location).kilometers
+#         distances.append((place, distance))
+#     distances.sort(key=lambda x: x[1])
+#     return distances[0][0]
+
+def find_nearest_place(user_location):
     distances = []
     for place, info in responses.items():
         lat, lon = map(float, info['геолокация'].split(', '))
         place_location = (lat, lon)
         distance = geodesic(user_location, place_location).kilometers
-        distances.append((place, distance, place_location))
+        distances.append((place, distance))
     distances.sort(key=lambda x: x[1])
-    return distances
+    return distances[0][0], distances[0][1]
 
-def get_route(origin_point, destination_point):
-    try:
-        origin_node = ox.distance.nearest_nodes(G, origin_point[1], origin_point[0])
-        destination_node = ox.distance.nearest_nodes(G, destination_point[1], destination_point[0])
-        shortest_route = nx.shortest_path(G, origin_node, destination_node, weight='length')
-        return shortest_route
-    except Exception as e:
-        print(f"Ошибка при построении маршрута: {e}")
-        return []
+# def plot_route_to_nearest_place(user_location):
+#     nearest_place = find_nearest_place(user_location)
+#     nearest_place_location = tuple(map(float, responses[nearest_place]['геолокация'].split(', ')))
+#     orig_node = ox.distance.nearest_nodes(graph, user_location[1], user_location[0])
+#     dest_node = ox.distance.nearest_nodes(graph, nearest_place_location[1], nearest_place_location[0])
+#     shortest_route = nx.shortest_path(graph, orig_node, dest_node, weight='length')
+#
+#     # Create a folium map with the route
+#     route_map = ox.plot_route_folium(graph, shortest_route, tiles='openstreetmap')
+#
+#     # Save the map to an HTML file
+#     map_html_path = 'route_map.html'
+#     route_map.save(map_html_path)
+#
+#     # Convert HTML to image using Selenium
+#     # Initialize the Chrome driver
+#     service = Service(ChromeDriverManager().install())
+#     options = webdriver.ChromeOptions()
+#     options.add_argument('--headless')
+#     options.add_argument('--no-sandbox')
+#     options.add_argument('--disable-dev-shm-usage')
+#     driver = webdriver.Chrome(service=service, options=options)
+#
+#     # Open the HTML file in the browser
+#     driver.get('file://' + os.path.abspath(map_html_path))
+#     time.sleep(2)  # Allow some time for the map to render
+#
+#     # Capture the screenshot
+#     route_image_path = 'route.png'
+#     driver.save_screenshot(route_image_path)
+#     driver.quit()
+#
+#     # Optionally, crop the image to remove the browser frame
+#     image = Image.open(route_image_path)
+#     cropped_image = image.crop((0, 0, image.width, image.height))
+#     cropped_image.save(route_image_path)
+#
+#     return route_image_path
 
-def get_route_coordinates(route):
-    route_coords = [(G.nodes[node]['y'], G.nodes[node]['x']) for node in route]
-    return route_coords
+def plot_route_to_nearest_place(user_location):
+    nearest_place, distance = find_nearest_place(user_location)
+    nearest_place_location = tuple(map(float, responses[nearest_place]['геолокация'].split(', ')))
+    orig_node = ox.distance.nearest_nodes(graph, user_location[1], user_location[0])
+    dest_node = ox.distance.nearest_nodes(graph, nearest_place_location[1], nearest_place_location[0])
+    shortest_route = nx.shortest_path(graph, orig_node, dest_node, weight='length')
 
+    # Create a folium map with the route
+    route_map = ox.plot_route_folium(graph, shortest_route, tiles='openstreetmap')
 
+    # Save the map to an HTML file
+    map_html_path = 'route_map.html'
+    route_map.save(map_html_path)
+
+    # Convert HTML to image using Selenium
+    # Initialize the Chrome driver
+    service = Service(ChromeDriverManager().install())
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    driver = webdriver.Chrome(service=service, options=options)
+
+    # Open the HTML file in the browser
+    driver.get('file://' + os.path.abspath(map_html_path))
+    time.sleep(2)  # Allow some time for the map to render
+
+    # Capture the screenshot
+    route_image_path = 'route.png'
+    driver.save_screenshot(route_image_path)
+    driver.quit()
+
+    # Optionally, crop the image to remove the browser frame
+    image = Image.open(route_image_path)
+    cropped_image = image.crop((0, 0, image.width, image.height))
+    cropped_image.save(route_image_path)
+
+    return route_image_path, nearest_place, distance
 
 
 @bot.message_handler(commands=['start'])
@@ -188,36 +272,31 @@ def ask_for_location(message):
     bot.send_message(message.chat.id, "Пожалуйста, отправьте ваше местоположение:", reply_markup=markup)
 
 
+# @bot.message_handler(content_types=['location'])
+# def handle_location(message):
+#     if message.location is not None:
+#         user_location = (message.location.latitude, message.location.longitude)
+#         route_image_path = plot_route_to_nearest_place(user_location)
+#
+#         # Send the route image to the user
+#         with open(route_image_path, 'rb') as img:
+#             bot.send_photo(message.chat.id, img)
+
 @bot.message_handler(content_types=['location'])
 def handle_location(message):
     if message.location is not None:
         user_location = (message.location.latitude, message.location.longitude)
-        distances = calculate_distances(user_location, responses)
-        nearest_place = distances[0][0]
-        nearest_place_location = distances[0][2]
-        route = get_route(user_location, nearest_place_location)
-        route_coords = get_route_coordinates(route)
+        route_image_path, nearest_place, distance = plot_route_to_nearest_place(user_location)
 
-        bot.send_message(message.chat.id, f"Ближайшая достопримечательность: {nearest_place}")
-
-        # Plot the route
-        fig, ax = ox.plot_graph_route(G, route, route_linewidth=6, node_size=0, bgcolor='w', show=False, close=False)
-
-        # margin = 0.02  # Add some margin around the route
-        # route_nodes = [node for node in route]
-        # route_graph = G.subgraph(route_nodes)
-        # north, south, east, west = ox.utils_geo.graph_to_gdf(route_graph).total_bounds
-        # ax.set_xlim(west - margin, east + margin)
-        # ax.set_ylim(south - margin, north + margin)
-
-        # Save the plot as an image file
-        image_path = 'route.png'
-        plt.savefig(image_path, bbox_inches='tight')
-        plt.close()
-
-        # Send the image to the user
-        with open(image_path, 'rb') as img:
+        # Send the route image to the user
+        with open(route_image_path, 'rb') as img:
             bot.send_photo(message.chat.id, img)
+
+        # Send the name of the nearest place and the distance
+        bot.send_message(message.chat.id,
+                         f"Маршрут построен до ближайшей достопримечательности: {nearest_place}.\nРасстояние: {distance:.2f} км")
+
+
 
 
 bot.polling(none_stop=True)
