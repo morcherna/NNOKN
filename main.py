@@ -26,7 +26,7 @@ from staticmap import StaticMap, IconMarker, CircleMarker, Line
 
 import guide
 
-bot = telebot.TeleBot('7048895621:AAEGl76WZNewVPZgL3l1yK1XZo-cZs76eWA')
+bot = telebot.TeleBot('token')
 
 #G = ox.plot_route_folium('Nizhny Novgorod, Russia')
 place = 'Nizhny Novgorod, Russia'
@@ -195,7 +195,7 @@ def handle_photo(message):
     chat_id = message.chat.id
     file_id = message.photo[-1].file_id
     file_info = bot.get_file(file_id)
-    token = '7048895621:AAEGl76WZNewVPZgL3l1yK1XZo-cZs76eWA'
+    token = 'token'
     file_url = f"https://api.telegram.org/file/bot{token}/{file_info.file_path}"
 
     # Загружаем изображение из URL
