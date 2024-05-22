@@ -30,6 +30,8 @@
 ![image](https://github.com/morcherna/NNOKN/assets/91057288/eea83d62-d4f2-4b0c-a047-404364c024a2)
 
 ![image](https://github.com/morcherna/NNOKN/assets/91057288/9555d7c3-fd8b-427a-8ddc-034e4c9f57b1)
+
+
 Строим маршрут до ближайших достопримечательностей:
 
 
